@@ -14,6 +14,7 @@ But before moving onto computational methods lets look at the theoretical constr
 Once the theoretical basis was clear I moved onto the computational part. The equations I obatined through theoretical means do capture some essence but did not fully encapsulate the dynamics of manifold consolidation. My next approach was using SINDY [Sparse Idetification of Non-Linear Dynamics] to capture the essence of manifold exploration.
 
 Preparation of Data: 
+
 1) Description about dataset
 
 The number of animals = 6 rats (Animal 1 - Animal 6).
@@ -42,13 +43,25 @@ e.g., If spike_rate is 31-by-600 array, there are 31 units and 600 bins containi
       If the bin (row 7, column 1) has number 1, it means there were one spike during 1-ms window at -200 ms before reach onset.
       
 2) Conversion to .npz : The data is stored in .mat form with multiple embedded cell arrays which made it almost impossible to work. However a conversion to .npz [NumPy-specific binary file format] proved to be fruitful in working with the data in python. The script for conversion of the data is mentioned (mat_to_csv.py).
-3) Spike Binning : The raw spike times for each neuron are converted into a matrix [bin_size x N_neurons]
-4) Sleep Mask: The script filters out wakefulness and REM sleep by identifying periods of NREM sleep.It uses the specified NREM_LFP_REGION (default 'M1') to create a boolean mask. A 50 ms time bin is marked True (NREM) if the LFP signal in that bin contains non-zero values
-6) Dimensionality Reduction: As the data is of very high dimensions [1 x 6666666], using dimensionality reduction techniques was a no brainer. I have used multiple Dimensionality reduction techniques devised for low-dimensional latent trajectories from high-dimensional, noisy time-series data. [GPFA, FPCA, PCA, Taken's embedding theorem]. The scripts of which are given. The script filters out "silent" neurons by excluding any neuron whose average firing rate falls below MIN_RATE_HZ (default 0.05 Hz).The surviving spike trains are smoothed using a Gaussian filter (SMOOTH_SIGMA) to create continuous firing rate estimates. These smoothed rates are then aggregated into a set of population-soecific signals using the above mentioned techniques.The signals are then z-scored.
-7) Matrix Construction: For a given epoch (e.g., 'post'), the population signals from the regions are vertically stacked (concatenated) to create a single, unified "State Matrix" representing the neocortical network's coordinated state during that epoch.
 
-8) The script gathers the State Matrices for a specific epoch across all available days. It applies the above mentioned techniques across these concatenated days. This extracts a shared set of continuous latent trajectories
-   
-9) After the latent low-dimensional components are obtained, the data is clustered using K-means(mostly) and in some cases Gaussian Mixture Models (GMM) on the basis of the thresholds which have been set manually (after recommendations from various LLMs) 
+
+Pipeline:
+
+1) Spike Binning : The raw spike times for each neuron are converted into a matrix [bin_size x N_neurons]
+2) Sleep Mask: The script filters out wakefulness and REM sleep by identifying periods of NREM sleep.It uses the specified NREM_LFP_REGION (default 'M1') to create a boolean mask. A 50 ms time bin is marked True (NREM) if the LFP signal in that bin contains non-zero values
+3) Dimensionality Reduction: As the data is of very high dimensions [1 x 6666666], using dimensionality reduction techniques was a no brainer. I have used multiple Dimensionality reduction techniques devised for low-dimensional latent trajectories from high-dimensional, noisy time-series data. [GPFA, FPCA, PCA, Taken's embedding theorem]. The scripts of which are given.
+The script filters out "silent" neurons by excluding any neuron whose average firing rate falls below MIN_RATE_HZ (default 0.05 Hz).The surviving spike trains are smoothed using a Gaussian filter (SMOOTH_SIGMA) to create continuous firing rate estimates. These smoothed rates are then aggregated into a set of population-soecific signals using the above mentioned techniques.The signals are then z-scored.
+4) Matrix Construction: For a given epoch (e.g., 'post'), the population signals from the regions are vertically stacked (concatenated) to create a single, unified "State Matrix" representing the neocortical network's coordinated state during that epoch.
+5) SINDy : The continuous latent trajectories from the FPCA step are fed into the PySINDy optimizer. Majority of scripts use STLSQ regression, some use SR3 regression on a polynomial library to discover the underlying differential equations at govern how these latent variables interact and evolve over time.
+6) The final results are saved in an output directory, and the results are plotted.
+
+Methodology: 
+The above methodology is followed while implementing the two approaches: population dynamics and singular neuron dynamics.
+
+Results:
+The equations output across all methodologies and techniques implemented showcase the trend given in the paper, the equations showcase clear evidence of manifold consolidation.
+The metric used to check the fidelty of the output was R2.
+  
+
 
 The data availability is : https://zenodo.org/records/7226711
