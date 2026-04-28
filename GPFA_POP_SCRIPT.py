@@ -3,7 +3,7 @@ GPFA_Population.py  —  Population-level GPFA (Smooth + FA) on Kim et al. 2022 
 =========================================================================
 """
 
-import os, re, glob, warnings, logging, zlib
+import os, re, glob, warnings, logging
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -396,12 +396,7 @@ def process_animal(animal_name, cfg):
     for fpath in files:
         day = os.path.splitext(os.path.basename(fpath))[0]
         log.info(f"\n  -- {day} --")
-        
-        try:
-            data = load_npz(fpath)
-        except (zlib.error, ValueError) as e:
-            log.error(f"  [SKIP] {day} — corrupted file: {type(e).__name__}: {e}")
-            continue
+        data = load_npz(fpath)
 
         for epoch, idx in EPOCHS.items():
             state = build_state_matrix(data, cfg, idx, epoch)
