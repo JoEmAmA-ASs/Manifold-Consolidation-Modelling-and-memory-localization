@@ -1,0 +1,17 @@
+File         : Animal2_Day8
+Mode         : Subpopulations as Kuramoto oscillators
+M1  pops (K) : 2  (from 56 active neurons)
+PFC pops (K) : 5  (from 56 active neurons)
+dt           : 0.01 s
+PCA per clust: False
+Auto-cluster : True
+-----------------------------------------------------------------
+Equations (Kuramoto-Adler phase ODEs):
+
+dM1_pop1/dt = -0.3522 1 +  0.5435 sin(1 M1_pop1) +  4.7889 cos(1 M1_pop1) +  0.0913 cos(1 M1_pop2) + -0.5111 sin(1 PFC_pop1) + -2.1626 cos(1 PFC_pop1) + -0.1742 cos(1 PFC_pop2) + -0.1871 sin(1 PFC_pop3) + -1.0681 cos(1 PFC_pop3) + -0.1612 cos(1 PFC_pop4) +  0.6227 cos(1 PFC_pop5)
+dM1_pop2/dt = -0.5027 1 + -0.1019 sin(1 M1_pop1) +  0.0901 cos(1 M1_pop1) +  0.5542 sin(1 M1_pop2) +  4.1540 cos(1 M1_pop2) +  0.0727 sin(1 PFC_pop1) + -0.5672 sin(1 PFC_pop2) + -2.2651 cos(1 PFC_pop2) + -0.0884 sin(1 PFC_pop3) + -0.2473 cos(1 PFC_pop3) + -0.1450 sin(1 PFC_pop4) +  0.2829 cos(1 PFC_pop4) +  0.4806 cos(1 PFC_pop5)
+dPFC_pop1/dt = -0.3628 1 +  0.6534 sin(1 M1_pop1) +  0.2026 cos(1 M1_pop1) + -0.0813 sin(1 M1_pop2) +  0.1776 cos(1 M1_pop2) + -0.3064 sin(1 PFC_pop1) + -0.8768 cos(1 PFC_pop1) + -0.1345 sin(1 PFC_pop2) + -3.4595 cos(1 PFC_pop2) + -0.2361 sin(1 PFC_pop3) +  3.3532 cos(1 PFC_pop3) + -0.0638 sin(1 PFC_pop4) + -0.8462 cos(1 PFC_pop4) +  0.3540 sin(1 PFC_pop5) +  7.3764 cos(1 PFC_pop5)
+dPFC_pop2/dt = -0.2991 1 + -0.0985 sin(1 M1_pop1) +  0.3621 cos(1 M1_pop1) +  0.6318 sin(1 M1_pop2) +  0.5579 cos(1 M1_pop2) +  0.1334 sin(1 PFC_pop1) + -3.7953 cos(1 PFC_pop1) + -2.5642 cos(1 PFC_pop2) + -0.1351 sin(1 PFC_pop3) + -0.8354 cos(1 PFC_pop3) + -0.3949 sin(1 PFC_pop4) +  4.5926 cos(1 PFC_pop4) +  0.2797 sin(1 PFC_pop5) +  8.1885 cos(1 PFC_pop5)
+dPFC_pop3/dt =  0.3828 1 +  0.2709 sin(1 M1_pop1) +  4.2373 cos(1 M1_pop1) + -0.1207 cos(1 M1_pop2) + -0.3414 sin(1 PFC_pop1) +  3.1938 cos(1 PFC_pop1) + -0.2291 sin(1 PFC_pop2) + -0.4086 cos(1 PFC_pop2) +  0.3857 sin(1 PFC_pop3) +  10.7354 cos(1 PFC_pop3) +  0.1053 sin(1 PFC_pop4) +  0.3149 cos(1 PFC_pop4) + -0.1770 cos(1 PFC_pop5)
+dPFC_pop4/dt =  0.4463 1 +  0.0617 sin(1 M1_pop1) + -0.3290 cos(1 M1_pop1) +  0.1734 sin(1 M1_pop2) +  4.7942 cos(1 M1_pop2) +  0.3764 cos(1 PFC_pop1) +  0.2638 sin(1 PFC_pop2) +  5.4548 cos(1 PFC_pop2) +  0.3242 sin(1 PFC_pop4) +  11.1121 cos(1 PFC_pop4) + -0.1338 cos(1 PFC_pop5)
+dPFC_pop5/dt =  0.4148 1 +  0.1919 sin(1 M1_pop1) + -1.0069 cos(1 M1_pop1) +  0.5628 sin(1 M1_pop2) + -0.5162 cos(1 M1_pop2) + -0.1615 sin(1 PFC_pop1) + -0.7746 cos(1 PFC_pop1) + -0.3633 sin(1 PFC_pop2) + -2.0159 cos(1 PFC_pop2) + -0.1219 sin(1 PFC_pop3) +  0.9983 cos(1 PFC_pop3) + -0.1548 sin(1 PFC_pop4) +  2.1158 cos(1 PFC_pop4) +  0.6208 sin(1 PFC_pop5) +  15.7245 cos(1 PFC_pop5)

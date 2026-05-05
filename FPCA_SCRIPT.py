@@ -3,7 +3,7 @@ FPCA_Population.py  —  Population-level FPCA on Kim et al. 2022 data
 =========================================================================
 """
 
-import os, re, glob, warnings, logging
+import os, re, glob, warnings, logging, zlib
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 # =============================================================================
 CONFIG = dict(
     DATA_FOLDER     = r"D:\College\SEM 8\Sem_project",
-    DATA_PATTERN    = 'Animal*_Day*.npz',
+    DATA_PATTERN    = 'Animal2_Day*.npz',
     
     # Changed output directory as requested
     OUT_FOLDER      = 'FPCA_scores_allanimals',
@@ -40,11 +40,11 @@ CONFIG = dict(
     #                                 | 'kmeans' | 'mean'
     POP_METHOD      = 'pca_ensemble',
     N_PCA_COMPS     = 5,            # per region, for pca_ensemble
-    N_CLUSTERS      = 4,            # per region, for kmeans
+    N_CLUSTERS      = 10,            # per region, for kmeans
     SMOOTH_SIGMA    = 2.0,          # Gaussian smooth sigma (bins)
-    MIN_RATE_HZ     = 0.05,         # exclude neurons below this firing rate
+    MIN_RATE_HZ     = 0.005,         # exclude neurons below this firing rate
 
-    N_FPCA_COMPS    = 6,            # functional PCs kept across days
+    N_FPCA_COMPS    = 10,           # functional PCs kept across days
 
     SAVE_PLOTS      = True,
     PLOT_DPI        = 120,
@@ -202,25 +202,24 @@ def build_population_signals(spike_mat, cfg, label=''):
     return pop
 
 
-def build_state_matrix(data, cfg, epoch_idx, epoch_label):
+def build_region_state_matrices(data, cfg, epoch_idx, epoch_label):
     """
-    Full (K_total x T_nrem) state matrix for one day/epoch.
-    Combines M1 + PFC population signals.
-    Returns None if data is insufficient.
+    Build per-region (K x T_nrem) state matrices for one day/epoch.
+    Returns dict: {'M1': state_m1, 'PFC': state_pfc} or {}
     """
     fs = get_fs(data, epoch_idx)
     try:
         lfp = get_lfp(data, cfg['NREM_LFP_REGION'], epoch_idx)
     except KeyError as e:
         log.warning(f"  {e} — skipping epoch {epoch_label}")
-        return None
+        return {}
 
     duration_s = len(lfp) / fs
     log.info(f"  [{epoch_label}] duration={duration_s:.1f}s  fs={fs:.2f}Hz")
 
     nrem = make_nrem_mask(lfp, fs, cfg['BIN_SIZE_MS'])
 
-    all_pop = []
+    region_states = {}
     for region in ['M1', 'PFC']:
         times = collect_spike_times(data, region, epoch_idx)
         if not times:
@@ -230,13 +229,25 @@ def build_state_matrix(data, cfg, epoch_idx, epoch_label):
         mask  = nrem[:T]                        # guard against off-by-one
         pop   = build_population_signals(mat[:, mask], cfg,
                                          f"{region}_{epoch_label}")
-        all_pop.append(pop)
+        region_states[region] = pop
+        log.info(f"  [{region}_{epoch_label}] State matrix: {pop.shape}")
 
-    if not all_pop:
+    return region_states
+
+
+def build_state_matrix(data, cfg, epoch_idx, epoch_label):
+    """
+    Full (K_total x T_nrem) state matrix for one day/epoch.
+    Combines M1 + PFC population signals.
+    Returns None if data is insufficient.
+    """
+    region_states = build_region_state_matrices(data, cfg, epoch_idx, epoch_label)
+    if not region_states:
         return None
-
+    
+    all_pop = [region_states[r] for r in ['M1', 'PFC'] if r in region_states]
     state = np.vstack(all_pop)
-    log.info(f"  [{epoch_label}] State matrix: {state.shape}")
+    log.info(f"  [{epoch_label}] Combined state matrix: {state.shape}")
     return state
 
 
@@ -319,6 +330,108 @@ def plot_fpca_scores(fpca, label, out_dir, dpi):
     plt.close(fig)
 
 
+def plot_variance_pre_post_across_regions(out_folder, animals, dpi=120):
+    """
+    Load all region-specific FPCA results and plot variance comparison PRE vs POST.
+    Creates a figure with variance explained across regions.
+    """
+    # Collect variance data
+    variance_data = {'M1': {'pre': [], 'post': []},
+                     'PFC': {'pre': [], 'post': []}}
+    
+    for animal in animals:
+        animal_dir = os.path.join(out_folder, animal)
+        for region in ['M1', 'PFC']:
+            for epoch in ['pre', 'post']:
+                fname = os.path.join(animal_dir, f'{animal}_{region}_{epoch}_fpca_results.npz')
+                if os.path.exists(fname):
+                    try:
+                        data = np.load(fname, allow_pickle=True)
+                        var = data['fpca_var_explained']
+                        variance_data[region][epoch].append(var)
+                    except Exception as e:
+                        log.warning(f"Could not load {fname}: {e}")
+    
+    # Create comparison plots
+    for region in ['M1', 'PFC']:
+        pre_vars = variance_data[region]['pre']
+        post_vars = variance_data[region]['post']
+        
+        if not pre_vars or not post_vars:
+            log.warning(f"Insufficient data for {region}")
+            continue
+        
+        # Aggregate variance: mean across animals and cumulative across components
+        pre_mean = np.mean(pre_vars, axis=0)
+        post_mean = np.mean(post_vars, axis=0)
+        pre_cum = np.cumsum(pre_mean)
+        post_cum = np.cumsum(post_mean)
+        
+        n_comps = len(pre_mean)
+        comps = np.arange(1, n_comps + 1)
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        
+        # Individual component variance
+        x = np.arange(n_comps)
+        w = 0.35
+        ax1.bar(x - w/2, pre_mean * 100, w, label='PRE', color='steelblue', alpha=0.8)
+        ax1.bar(x + w/2, post_mean * 100, w, label='POST', color='coral', alpha=0.8)
+        ax1.set_xlabel('Component')
+        ax1.set_ylabel('Variance Explained (%)')
+        ax1.set_title(f'{region} — FPC Variance per Component')
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(comps)
+        ax1.legend()
+        ax1.grid(axis='y', alpha=0.3)
+        
+        # Cumulative variance
+        ax2.plot(comps, pre_cum * 100, 'o-', label='PRE', lw=2, markersize=6, color='steelblue')
+        ax2.plot(comps, post_cum * 100, 's-', label='POST', lw=2, markersize=6, color='coral')
+        ax2.set_xlabel('Number of Components')
+        ax2.set_ylabel('Cumulative Variance Explained (%)')
+        ax2.set_title(f'{region} — Cumulative FPC Variance')
+        ax2.legend()
+        ax2.grid(alpha=0.3)
+        ax2.set_ylim([0, 105])
+        
+        plt.tight_layout()
+        out_path = os.path.join(out_folder, f'{region}_variance_pre_vs_post.png')
+        fig.savefig(out_path, dpi=dpi, bbox_inches='tight')
+        log.info(f"Saved -> {out_path}")
+        plt.close(fig)
+    
+    # Create combined comparison across all regions
+    fig, ax = plt.subplots(figsize=(10, 5))
+    regions = ['M1', 'PFC']
+    pre_total = []
+    post_total = []
+    
+    for region in regions:
+        pre_vars = variance_data[region]['pre']
+        post_vars = variance_data[region]['post']
+        if pre_vars and post_vars:
+            pre_total.append(np.mean([v.sum() for v in pre_vars]) * 100)
+            post_total.append(np.mean([v.sum() for v in post_vars]) * 100)
+    
+    if pre_total and post_total:
+        x = np.arange(len(regions))
+        w = 0.35
+        ax.bar(x - w/2, pre_total, w, label='PRE', color='steelblue', alpha=0.8)
+        ax.bar(x + w/2, post_total, w, label='POST', color='coral', alpha=0.8)
+        ax.set_ylabel('Total Variance Explained (%)')
+        ax.set_title('FPC Score Variance PRE vs POST Across Regions')
+        ax.set_xticks(x)
+        ax.set_xticklabels(regions)
+        ax.legend()
+        ax.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        out_path = os.path.join(out_folder, 'all_regions_variance_pre_vs_post.png')
+        fig.savefig(out_path, dpi=dpi, bbox_inches='tight')
+        log.info(f"Saved -> {out_path}")
+        plt.close(fig)
+
+
 def save_results(animal, epoch_label, fpca, out_dir):
     payload = dict(fpca_scores       = fpca['scores'],
                    fpca_var_explained= fpca['var_explained'],
@@ -326,6 +439,19 @@ def save_results(animal, epoch_label, fpca, out_dir):
                    fpca_mean         = fpca['mean'])
                    
     fname = os.path.join(out_dir, f'{animal}_{epoch_label}_fpca_results.npz')
+    np.savez_compressed(fname, **payload)
+    log.info(f"  Saved -> {fname}")
+
+
+def save_region_results(animal, epoch_label, region, fpca, out_dir):
+    """Save per-region FPCA results."""
+    payload = dict(fpca_scores       = fpca['scores'],
+                   fpca_var_explained= fpca['var_explained'],
+                   fpca_components   = fpca['components'],
+                   fpca_mean         = fpca['mean'],
+                   region            = region)
+                   
+    fname = os.path.join(out_dir, f'{animal}_{region}_{epoch_label}_fpca_results.npz')
     np.savez_compressed(fname, **payload)
     log.info(f"  Saved -> {fname}")
 
@@ -353,32 +479,65 @@ def process_animal(animal_name, cfg):
     log.info(f"  {animal_name}  |  {len(files)} days")
     log.info(f"{'='*68}")
 
-    day_states = {'pre': [], 'post': []}
+    day_states = {'pre': {'M1': [], 'PFC': []}, 'post': {'M1': [], 'PFC': []}}
+    day_states_combined = {'pre': [], 'post': []}
     day_tags   = []
 
     for fpath in files:
         day = os.path.splitext(os.path.basename(fpath))[0]
         day_tags.append(day)
         log.info(f"\n  -- {day} --")
-        data = load_npz(fpath)
+        
+        try:
+            data = load_npz(fpath)
+        except (zlib.error, ValueError) as e:
+            log.error(f"  [SKIP] {day} — corrupted file: {type(e).__name__}: {e}")
+            continue
 
         for epoch, idx in EPOCHS.items():
-            state = build_state_matrix(data, cfg, idx, epoch)
-            if state is not None and state.size > 0:
-                day_states[epoch].append(state)
+            # Get per-region states
+            region_states = build_region_state_matrices(data, cfg, idx, epoch)
+            if not region_states:
+                continue
+            
+            # Store per-region states
+            for region, state in region_states.items():
+                day_states[epoch][region].append(state)
+            
+            # Also build combined state for visualization
+            state_combined = build_state_matrix(data, cfg, idx, epoch)
+            if state_combined is not None and state_combined.size > 0:
+                day_states_combined[epoch].append(state_combined)
                 if cfg['SAVE_PLOTS']:
                     plot_pop_signals(
-                        state,
+                        state_combined,
                         f"{animal_name}_{day}_{epoch}",
                         cfg['BIN_SIZE_MS'] / 1000.0,
                         out_dir, cfg['PLOT_DPI'])
 
-    for epoch, mats in day_states.items():
+    # Run per-region FPCA
+    for epoch in ['pre', 'post']:
+        for region in ['M1', 'PFC']:
+            mats = day_states[epoch][region]
+            if len(mats) < 2:
+                log.warning(f"  [{region}_{epoch}] only {len(mats)} day(s) — FPCA skipped")
+                continue
+
+            log.info(f"\n  -- FPCA [{region}_{epoch}]  {len(mats)} days --")
+            fpca  = run_fpca(mats, cfg['N_FPCA_COMPS'])
+
+            if cfg['SAVE_PLOTS']:
+                plot_fpca_scores(fpca, f"{animal_name}_{region}_{epoch}", out_dir, cfg['PLOT_DPI'])
+
+            save_region_results(animal_name, epoch, region, fpca, out_dir)
+    
+    # Also run combined FPCA for backward compatibility
+    for epoch, mats in day_states_combined.items():
         if len(mats) < 2:
             log.warning(f"  [{epoch}] only {len(mats)} day(s) — FPCA skipped")
             continue
 
-        log.info(f"\n  -- FPCA [{epoch}]  {len(mats)} days --")
+        log.info(f"\n  -- FPCA [combined_{epoch}]  {len(mats)} days --")
         fpca  = run_fpca(mats, cfg['N_FPCA_COMPS'])
 
         if cfg['SAVE_PLOTS']:
@@ -394,7 +553,7 @@ if __name__ == '__main__':
     cfg = CONFIG.copy()
     if len(sys.argv) > 1:
         animal = sys.argv[1]
-        cfg['DATA_PATTERN'] = f'{animal}_Day*.npz'
+        cfg['DATA_PATTERN'] = f'{animal}pc10_Day*.npz'
         process_animal(animal, cfg)
     else:
         all_files = sorted(glob.glob(
@@ -404,3 +563,17 @@ if __name__ == '__main__':
         log.info(f"Found animals: {animals}")
         for a in animals:
             process_animal(a, cfg)
+        
+        # After processing all animals, create cross-region variance comparison plots
+        log.info(f"\n{'='*68}")
+        log.info("  Creating cross-region variance comparison plots...")
+        log.info(f"{'='*68}")
+        try:
+            plot_variance_pre_post_across_regions(
+                os.path.join(cfg['DATA_FOLDER'], cfg['OUT_FOLDER']),
+                animals,
+                cfg['PLOT_DPI']
+            )
+            log.info("  Variance comparison plots created successfully!")
+        except Exception as e:
+            log.error(f"  Error creating variance plots: {e}")

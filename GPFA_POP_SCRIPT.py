@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 # =============================================================================
 CONFIG = dict(
     DATA_FOLDER     = r"D:\College\SEM 8\Sem_project",
-    DATA_PATTERN    = 'Animal*_Day*.npz',
+    DATA_PATTERN    = 'Animal2_Day*.npz',
     
     # Changed output directory to GPFA as requested
     OUT_FOLDER      = 'GPFA_scores_allanimals',
@@ -39,9 +39,9 @@ CONFIG = dict(
     #                                 | 'kmeans' | 'mean'
     POP_METHOD      = 'pca_ensemble',
     N_PCA_COMPS     = 5,            # per region, for pca_ensemble
-    N_CLUSTERS      = 4,            # per region, for kmeans
+    N_CLUSTERS      = 10,            # per region, for kmeans
     SMOOTH_SIGMA    = 2.0,          # Gaussian smooth sigma (bins) - acts as GPFA time prior
-    MIN_RATE_HZ     = 0.05,         # exclude neurons below this firing rate
+    MIN_RATE_HZ     = 0.005,         # exclude neurons below this firing rate
 
     N_GPFA_COMPS    = 6,            # Latent factors extracted across days
 
@@ -376,7 +376,7 @@ EPOCHS = {'pre': 0, 'post': 1}
 def process_animal(animal_name, cfg):
     folder  = cfg['DATA_FOLDER']
     pattern = os.path.join(
-        folder, cfg['DATA_PATTERN'].replace('Animal*', animal_name))
+        folder, cfg['DATA_PATTERN'].replace('Animal2', animal_name))
     files   = sorted(glob.glob(pattern))
 
     if not files:

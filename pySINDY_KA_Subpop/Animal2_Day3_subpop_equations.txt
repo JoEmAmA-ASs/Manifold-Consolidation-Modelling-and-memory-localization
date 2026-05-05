@@ -1,0 +1,15 @@
+File         : Animal2_Day3
+Mode         : Subpopulations as Kuramoto oscillators
+M1  pops (K) : 2  (from 56 active neurons)
+PFC pops (K) : 3  (from 51 active neurons)
+dt           : 0.01 s
+PCA per clust: False
+Auto-cluster : True
+-----------------------------------------------------------------
+Equations (Kuramoto-Adler phase ODEs):
+
+dM1_pop1/dt = -0.3409 1 +  0.4875 sin(1 M1_pop1) +  6.2898 cos(1 M1_pop1) +  0.0933 cos(1 M1_pop2) +  0.0506 sin(1 PFC_pop1) + -0.1458 cos(1 PFC_pop1) + -0.5969 sin(1 PFC_pop2) + -4.1243 cos(1 PFC_pop2) +  0.1231 cos(1 PFC_pop3)
+dM1_pop2/dt = -0.4198 1 +  0.0616 cos(1 M1_pop1) +  0.3925 sin(1 M1_pop2) +  5.7661 cos(1 M1_pop2) + -0.5146 sin(1 PFC_pop1) + -2.9912 cos(1 PFC_pop1) + -0.0788 sin(1 PFC_pop2) + -0.0630 cos(1 PFC_pop2) + -0.0866 cos(1 PFC_pop3)
+dPFC_pop1/dt = -0.4477 1 +  0.0508 sin(1 M1_pop1) + -0.5399 cos(1 M1_pop1) +  0.5572 sin(1 M1_pop2) + -0.2239 cos(1 M1_pop2) + -0.3951 sin(1 PFC_pop1) +  1.3070 cos(1 PFC_pop1) + -0.1473 sin(1 PFC_pop2) + -2.2941 cos(1 PFC_pop2) +  0.1393 sin(1 PFC_pop3) +  5.1246 cos(1 PFC_pop3)
+dPFC_pop2/dt = -0.3786 1 +  0.6289 sin(1 M1_pop1) + -0.8593 cos(1 M1_pop1) + -0.4865 cos(1 M1_pop2) + -1.6667 cos(1 PFC_pop1) + -0.6202 sin(1 PFC_pop2) +  1.1848 cos(1 PFC_pop2) +  0.1836 sin(1 PFC_pop3) +  4.1939 cos(1 PFC_pop3)
+dPFC_pop3/dt =  0.5182 sin(1 M1_pop1) + -2.8466 cos(1 M1_pop1) +  0.2693 sin(1 M1_pop2) + -1.6699 cos(1 M1_pop2) + -0.0889 sin(1 PFC_pop1) +  0.7963 cos(1 PFC_pop1) + -0.2557 sin(1 PFC_pop2) + -0.6684 cos(1 PFC_pop2) +  0.0681 sin(1 PFC_pop3) +  10.3358 cos(1 PFC_pop3)
